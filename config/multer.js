@@ -15,16 +15,24 @@ const storage = multer.diskStorage({
 	},
 	filename: (req, file, cb) => {
 		const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-		cb(null, 'pdf-' + uniqueSuffix + path.extname(file.originalname));
+		const fileType = file.mimetype === 'application/pdf' ? 'pdf' : 'image';
+		cb(null, fileType + '-' + uniqueSuffix + path.extname(file.originalname));
 	},
 });
 
-// File filter - only allow PDF files
+// File filter - allow PDF and image files
 const fileFilter = (req, file, cb) => {
-	if (file.mimetype === 'application/pdf') {
+	const allowedMimeTypes = [
+		'application/pdf',
+		'image/jpeg',
+		'image/png',
+		'image/gif',
+		'image/webp',
+	];
+	if (allowedMimeTypes.includes(file.mimetype)) {
 		cb(null, true);
 	} else {
-		cb(new Error('Only PDF files are allowed'), false);
+		cb(new Error('Only PDF and image files are allowed'), false);
 	}
 };
 

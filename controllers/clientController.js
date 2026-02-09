@@ -36,7 +36,7 @@ exports.createClient = async (req, res) => {
 		}
 
 		if (!req.file) {
-			return res.status(400).json({ message: 'PDF file is required' });
+			return res.status(400).json({ message: 'File is required (PDF or image)' });
 		}
 
 		const { clientName, businessName, uniqueUrl } = req.body;
