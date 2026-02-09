@@ -6,10 +6,9 @@ const path = require('path');
 // Sanitize unique URL
 const sanitizeUrl = (url) => {
 	return url
-		.toLowerCase()
 		.trim()
 		.replace(/\s+/g, '-')
-		.replace(/[^a-z0-9-]/g, '')
+		.replace(/[^a-zA-Z0-9-]/g, '')
 		.replace(/-+/g, '-')
 		.replace(/^-|-$/g, '');
 };
@@ -36,7 +35,9 @@ exports.createClient = async (req, res) => {
 		}
 
 		if (!req.file) {
-			return res.status(400).json({ message: 'File is required (PDF or image)' });
+			return res
+				.status(400)
+				.json({ message: 'File is required (PDF or image)' });
 		}
 
 		const { clientName, businessName, uniqueUrl } = req.body;
