@@ -44,24 +44,31 @@ const deleteOldFile = async (pdfUrl) => {
 // Create new client
 exports.createClient = async (req, res) => {
 	try {
+		console.log('=== CREATE CLIENT REQUEST ===');
+		console.log('Body:', req.body);
+		console.log('File:', req.file ? { name: req.file.originalname, size: req.file.size, secure_url: req.file.secure_url } : 'NO FILE');
+
 		const errors = validationResult(req);
 		if (!errors.isEmpty()) {
-			return res.status(400).json({ errors: errors.array() });
+			console.log('Validation errors:', errors.array());
+			const errorMessages = errors.array().map(e => e.msg).join('; ');
+			return res.status(400).json({ 
+				message: 'Validation failed: ' + errorMessages,
+				errors: errors.array() 
+			});
 		}
 
 		if (!req.file) {
-			return res
-				.status(400)
-				.json({ message: 'File is required (PDF or image)' });
+			console.log('No file provided');
+			return res.status(400).json({ message: 'File is required (PDF or image)' });
 		}
 
-		// Log file upload details
-		console.log('File uploaded:', {
-			filename: req.file.filename,
-			secure_url: req.file.secure_url,
-			path: req.file.path,
-			size: req.file.size,
-		});
+		if (!req.file.secure_url) {
+			console.error('File uploaded but no secure_url:', req.file);
+			return res.status(500).json({ message: 'File upload failed - no URL returned from Cloudinary' });
+		}
+
+		console.log('✓ File uploaded to Cloudinary:', req.file.secure_url);
 
 		const { clientName, businessName, uniqueUrl } = req.body;
 		let sanitizedUrl = sanitizeUrl(uniqueUrl);
@@ -69,11 +76,10 @@ exports.createClient = async (req, res) => {
 		// Check if URL already exists
 		const existingClient = await Client.findOne({ uniqueUrl: sanitizedUrl });
 		if (existingClient) {
+			console.log('URL already exists:', sanitizedUrl);
 			// Delete uploaded file from Cloudinary
 			await deleteOldFile(req.file.secure_url);
-			return res
-				.status(400)
-				.json({ message: 'This unique URL is already taken' });
+			return res.status(400).json({ message: 'This unique URL is already taken' });
 		}
 
 		// Create new client with Cloudinary URL
@@ -86,17 +92,18 @@ exports.createClient = async (req, res) => {
 		});
 
 		await client.save();
+		console.log('✓ Client saved to database:', client._id);
 
 		res.status(201).json({
 			message: 'Client created successfully',
 			client,
 		});
 	} catch (error) {
-		if (req.file) {
-			await deleteOldFile(req.file.secure_url);
+		if (req.file && req.file.secure_url) {
+			await deleteOldFile(req.file.secure_url).catch(e => console.error('Cleanup error:', e));
 		}
 		console.error('Create client error:', error);
-		res.status(500).json({ message: 'Server error', error: error.message });
+		res.status(500).json({ message: error.message || 'Server error creating client' });
 	}
 };
 
@@ -159,17 +166,28 @@ exports.getSingleClient = async (req, res) => {
 // Update client
 exports.updateClient = async (req, res) => {
 	try {
+		console.log('=== UPDATE CLIENT REQUEST ===');
+		console.log('Client ID:', req.params.id);
+		console.log('Body:', req.body);
+		console.log('File:', req.file ? { name: req.file.originalname, size: req.file.size, secure_url: req.file.secure_url } : 'NO FILE');
+
 		const errors = validationResult(req);
 		if (!errors.isEmpty()) {
-			return res.status(400).json({ errors: errors.array() });
+			console.log('Validation errors:', errors.array());
+			const errorMessages = errors.array().map(e => e.msg).join('; ');
+			return res.status(400).json({ 
+				message: 'Validation failed: ' + errorMessages,
+				errors: errors.array() 
+			});
 		}
 
 		const { clientName, businessName, uniqueUrl } = req.body;
 
 		let client = await Client.findById(req.params.id);
 		if (!client) {
+			console.log('Client not found:', req.params.id);
 			if (req.file) {
-				await deleteOldFile(req.file.secure_url);
+				await deleteOldFile(req.file.secure_url).catch(e => console.error('Cleanup error:', e));
 			}
 			return res.status(404).json({ message: 'Client not found' });
 		}
@@ -183,8 +201,9 @@ exports.updateClient = async (req, res) => {
 			});
 
 			if (existingClient) {
+				console.log('URL already taken:', sanitizedUrl);
 				if (req.file) {
-					await deleteOldFile(req.file.secure_url);
+					await deleteOldFile(req.file.secure_url).catch(e => console.error('Cleanup error:', e));
 				}
 				return res
 					.status(400)
@@ -200,11 +219,19 @@ exports.updateClient = async (req, res) => {
 
 		// Handle file replacement
 		if (req.file) {
-			await deleteOldFile(client.pdfUrl);
+			if (!req.file.secure_url) {
+				console.error('File uploaded but no secure_url:', req.file);
+				return res.status(500).json({ message: 'File upload failed - no URL returned from Cloudinary' });
+			}
+			console.log('Replacing file:', client.pdfUrl, '->', req.file.secure_url);
+			if (client.pdfUrl && !client.pdfUrl.includes('/uploads/')) {
+				await deleteOldFile(client.pdfUrl).catch(e => console.error('Cleanup error:', e));
+			}
 			client.pdfUrl = req.file.secure_url;
 		}
 
 		await client.save();
+		console.log('✓ Client updated:', client._id, 'PDF URL:', client.pdfUrl);
 
 		res.json({
 			message: 'Client updated successfully',
@@ -212,10 +239,10 @@ exports.updateClient = async (req, res) => {
 		});
 	} catch (error) {
 		if (req.file) {
-			await deleteOldFile(req.file.secure_url);
+			await deleteOldFile(req.file.secure_url).catch(e => console.error('Cleanup error:', e));
 		}
 		console.error('Update client error:', error);
-		res.status(500).json({ message: 'Server error' });
+		res.status(500).json({ message: error.message || 'Server error updating client' });
 	}
 };
 
