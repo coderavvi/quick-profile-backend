@@ -17,20 +17,18 @@ connectDB();
 // Middleware
 app.use(express.json());
 
-// CORS configuration
-const allowedOrigins = process.env.CORS_ORIGINS
-	? process.env.CORS_ORIGINS.split(',').map((origin) => origin.trim())
-	: process.env.NODE_ENV === 'production'
-		? [
-				'https://quick-profile-frontend-9mgx.vercel.app',
-				'https://quick-profile.vercel.app',
-			]
-		: ['http://localhost:3000', 'http://localhost:5000'];
-
+// CORS configuration - Allow production frontend
 app.use(
 	cors({
-		origin: allowedOrigins,
+		origin: [
+			'https://quick-profile-frontend-9mgx.vercel.app',
+			'https://quick-profile.vercel.app',
+			'http://localhost:3000',
+			'http://localhost:5000',
+		],
 		credentials: true,
+		methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+		allowedHeaders: ['Content-Type', 'Authorization'],
 	}),
 );
 
