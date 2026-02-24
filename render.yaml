@@ -14,7 +14,9 @@ services:
         value: production
       - key: PORT
         value: 10000
-    disk:
-      name: uploads
-      mountPath: /opt/render/project/src/uploads
-      sizeGB: 1
+      - key: CLOUDINARY_CLOUD_NAME
+        scope: run
+      - key: CLOUDINARY_API_KEY
+        scope: run
+      - key: CLOUDINARY_API_SECRET
+        scope: run
