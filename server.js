@@ -18,11 +18,13 @@ connectDB();
 app.use(express.json());
 
 // CORS configuration
-const allowedOrigins =
-	process.env.NODE_ENV === 'production'
-		? (process.env.CORS_ORIGINS || 'https://quick-profile-frontend-9mgx.vercel.app,https://quick-profile.vercel.app')
-				.split(',')
-				.map((origin) => origin.trim())
+const allowedOrigins = process.env.CORS_ORIGINS
+	? process.env.CORS_ORIGINS.split(',').map((origin) => origin.trim())
+	: process.env.NODE_ENV === 'production'
+		? [
+				'https://quick-profile-frontend-9mgx.vercel.app',
+				'https://quick-profile.vercel.app',
+			]
 		: ['http://localhost:3000', 'http://localhost:5000'];
 
 app.use(
