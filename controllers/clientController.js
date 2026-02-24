@@ -46,25 +46,15 @@ exports.createClient = async (req, res) => {
 	try {
 		console.log('=== CREATE CLIENT REQUEST ===');
 		console.log('Body:', req.body);
-		console.log('File:', req.file ? { name: req.file.originalname, size: req.file.size, secure_url: req.file.secure_url } : 'NO FILE');
-
-		const errors = validationResult(req);
-		if (!errors.isEmpty()) {
-			console.log('Validation errors:', errors.array());
-			const errorMessages = errors.array().map(e => e.msg).join('; ');
-			return res.status(400).json({ 
-				message: 'Validation failed: ' + errorMessages,
-				errors: errors.array() 
-			});
-		}
+		console.log('File:', req.file ? { name: req.file.originalname, size: req.file.size, secure_url: req.file.secure_url, path: req.file.path } : 'NO FILE');
 
 		if (!req.file) {
-			console.log('No file provided');
+			console.log('ERROR: No file provided');
 			return res.status(400).json({ message: 'File is required (PDF or image)' });
 		}
 
 		if (!req.file.secure_url) {
-			console.error('File uploaded but no secure_url:', req.file);
+			console.error('ERROR: File uploaded but no secure_url:', JSON.stringify(req.file, null, 2));
 			return res.status(500).json({ message: 'File upload failed - no URL returned from Cloudinary' });
 		}
 
@@ -76,9 +66,9 @@ exports.createClient = async (req, res) => {
 		// Check if URL already exists
 		const existingClient = await Client.findOne({ uniqueUrl: sanitizedUrl });
 		if (existingClient) {
-			console.log('URL already exists:', sanitizedUrl);
+			console.log('ERROR: URL already exists:', sanitizedUrl);
 			// Delete uploaded file from Cloudinary
-			await deleteOldFile(req.file.secure_url);
+			await deleteOldFile(req.file.secure_url).catch(e => console.error('Cleanup error:', e));
 			return res.status(400).json({ message: 'This unique URL is already taken' });
 		}
 
@@ -92,7 +82,7 @@ exports.createClient = async (req, res) => {
 		});
 
 		await client.save();
-		console.log('✓ Client saved to database:', client._id);
+		console.log('✓ Client saved to database:', client._id, 'URL:', client.uniqueUrl, 'PDF:', client.pdfUrl);
 
 		res.status(201).json({
 			message: 'Client created successfully',
@@ -102,7 +92,7 @@ exports.createClient = async (req, res) => {
 		if (req.file && req.file.secure_url) {
 			await deleteOldFile(req.file.secure_url).catch(e => console.error('Cleanup error:', e));
 		}
-		console.error('Create client error:', error);
+		console.error('ERROR in createClient:', error.message, error.stack);
 		res.status(500).json({ message: error.message || 'Server error creating client' });
 	}
 };

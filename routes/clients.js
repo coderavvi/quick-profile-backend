@@ -1,10 +1,23 @@
 const express = require('express');
-const { body, query } = require('express-validator');
+const { body, validationResult } = require('express-validator');
 const clientController = require('../controllers/clientController');
 const auth = require('../middleware/auth');
 const upload = require('../config/cloudinary');
 
 const router = express.Router();
+
+// Middleware to validate input and handle validation errors
+const validate = (req, res, next) => {
+	const errors = validationResult(req);
+	if (!errors.isEmpty()) {
+		const errorMessages = errors.array().map(e => e.msg).join('; ');
+		return res.status(400).json({ 
+			message: 'Validation failed: ' + errorMessages,
+			errors: errors.array() 
+		});
+	}
+	next();
+};
 
 // Public route - get profile by unique URL
 router.get('/profile/:uniqueUrl', clientController.getPublicProfile);
@@ -27,6 +40,7 @@ router.post(
 			.withMessage('Business name is required'),
 		body('uniqueUrl').trim().notEmpty().withMessage('Unique URL is required'),
 	],
+	validate,
 	clientController.createClient,
 );
 
@@ -46,6 +60,7 @@ router.put(
 		body('businessName').optional().trim().notEmpty(),
 		body('uniqueUrl').optional().trim().notEmpty(),
 	],
+	validate,
 	clientController.updateClient,
 );
 
