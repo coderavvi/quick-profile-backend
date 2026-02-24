@@ -20,7 +20,7 @@ app.use(express.json());
 // CORS configuration
 const allowedOrigins =
 	process.env.NODE_ENV === 'production'
-		? (process.env.CORS_ORIGINS || 'https://quick-profile.vercel.app')
+		? (process.env.CORS_ORIGINS || 'https://quick-profile-frontend-9mgx.vercel.app,https://quick-profile.vercel.app')
 				.split(',')
 				.map((origin) => origin.trim())
 		: ['http://localhost:3000', 'http://localhost:5000'];
