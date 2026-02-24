@@ -55,6 +55,14 @@ exports.createClient = async (req, res) => {
 				.json({ message: 'File is required (PDF or image)' });
 		}
 
+		// Log file upload details
+		console.log('File uploaded:', {
+			filename: req.file.filename,
+			secure_url: req.file.secure_url,
+			path: req.file.path,
+			size: req.file.size,
+		});
+
 		const { clientName, businessName, uniqueUrl } = req.body;
 		let sanitizedUrl = sanitizeUrl(uniqueUrl);
 
@@ -88,7 +96,7 @@ exports.createClient = async (req, res) => {
 			await deleteOldFile(req.file.secure_url);
 		}
 		console.error('Create client error:', error);
-		res.status(500).json({ message: 'Server error' });
+		res.status(500).json({ message: 'Server error', error: error.message });
 	}
 };
 
